@@ -74,10 +74,9 @@ def write(file_path: str, value: list[Company]):
         wb = app.books.open(file_path)
         # wb = xw.Book(file_path)
 
-        sht_count = wb.sheets.count
-        sht_num = sht_count + 1
         # new sheet
-        sht = wb.sheets[sht_num]
+        wb.sheets.add()
+        sht = wb.sheets[0]
     else:
         wb = app.books.add()
         wb.save(file_path)
@@ -86,14 +85,7 @@ def write(file_path: str, value: list[Company]):
     if not wb or not sht:
         return
 
-    index = 0
-    count = len(cell_list)
-    while index < count:
-        cell = cell_list[index]
-        range: str = 'A' + str(index+1)
-        sht.range(range).expand('table').value = cell
-        index += 1
-
+    sht.range('A1').expand('table').value = cell_list
     wb.save()
     wb.close()
     app.quit()
