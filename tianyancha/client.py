@@ -30,7 +30,7 @@ class TycClient:
         if not self.payload:
             self.payload = {
                 "pageNum": 1,
-                "pageSize": 20,
+                "pageSize": 3,
                 "sortType": 0
             }
         url = TycQueryApi.format(q=quote(keyword))
@@ -90,9 +90,9 @@ class TycClient:
             # 公司成立时间
             target.found_time = src.get('estiblishTime', '-')[0:10]
             # 公司地址
-            target.company_address = src.get('regLocation', '-')
+            target.company_address = src.get('regLocation', '-').replace('<em>', '').replace('</em>', '')
             # 公司注册地址
-            target.register_address = src.get('regLocation', '-')
+            target.register_address = src.get('regLocation', '-').replace('<em>', '').replace('</em>', '')
             # 公司所在省份，例：浙江，北京，广东
             target.province = src.get('base', '-')
             # 公司所在市
