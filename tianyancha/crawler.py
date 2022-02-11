@@ -6,6 +6,7 @@
 """
 import logging
 from tianyancha.client import TycClient
+from util import excel
 
 
 def start():
@@ -19,6 +20,7 @@ def start():
         logging.info('正在采集[%s]...' % key)
         companies = TycClient().search(key).companies
         __printall(companies)
+        excel.write('../logs/tianyancha.xls', companies)
     logging.info("completed")
 
 
