@@ -7,3 +7,4 @@ redis
 requests
 urllib3
 xlwings
+selenium
