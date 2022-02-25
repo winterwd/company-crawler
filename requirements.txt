@@ -8,3 +8,8 @@ requests
 urllib3
 xlwings
 selenium
+Pillow
+baidu-aip
+alibabacloud_ocr_api20210707
+alibabacloud_darabonba_stream
+tencentcloud-sdk-python
