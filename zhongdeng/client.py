@@ -15,14 +15,23 @@ class ZDClient:
 
     @staticmethod
     def ocr_detect():
-        # res = TencentOCR().detect(3)
-        # print('TencentOCR = ' + res)
+        res = TencentOCR().detect()
+        if res is None:
+            print('TencentOCR fail')
+        else:
+            print('TencentOCR = ' + res)
 
-        res = BaiduOCR().detect(3)
-        print('BaiduOCR = ' + res)
-        #
-        # res = AliOCR().detect(3)
-        # print('AliOCR = ' + res)
+        res = BaiduOCR().detect()
+        if res is None:
+            print('BaiduOCR fail')
+        else:
+            print('BaiduOCR = ' + res)
+
+        res = AliOCR().detect()
+        if res is None:
+            print('AliOCR fail')
+        else:
+            print('AliOCR = ' + res)
 
 
 if __name__ == '__main__':
