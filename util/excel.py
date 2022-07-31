@@ -10,8 +10,9 @@ import os
 import xlwings as xw
 from db.models import Company
 
+
 class CellItem(object):
-    def __init__(self, src:Company=None):
+    def __init__(self, src: Company = None):
         if not src:
             self.keyword = '关键词'
             self.short_name = '企业简称'
@@ -51,6 +52,7 @@ class CellItem(object):
             self.tags,
             self.industry,
         ]
+
 
 def write(file_path: str, value: list[Company]):
     if not file_path:

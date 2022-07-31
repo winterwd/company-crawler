@@ -6,12 +6,59 @@
 :desc:
 """
 
-from tencent_ocr import TencentOCR
-from baidu_ocr import BaiduOCR
-from ali_ocr import AliOCR
+import time
+from util.ocr.tencent_ocr import TencentOCR
+from util.ocr.baidu_ocr import BaiduOCR
+from util.ocr.ali_ocr import AliOCR
+from zhongdeng import CODE_IMAGE_PATH
 
 
 class ZDClient:
+
+    def __init__(self):
+        self.__count = 1
+        self.ali_ocr = AliOCR(CODE_IMAGE_PATH)
+        self.tencent_ocr = TencentOCR(CODE_IMAGE_PATH)
+        self.baidu_ocr = BaiduOCR(CODE_IMAGE_PATH)
+
+    def ali_ocr_detect(self):
+        res_dict: dict = self.ali_ocr.detect()
+        content = res_dict.get('content')
+
+        data = "".join(list(filter(str.isdigit, content)))
+        if len(data) == 4:
+            return data
+        else:
+            self.__count -= 1
+            if self.__count > 0:
+                time.sleep(0.5)
+                return self.ali_ocr_detect()
+            else:
+                return None
+
+    def tencent_ocr_detect(self):
+        res = self.tencent_ocr.detect()
+        if res is None:
+            print('TencentOCR fail')
+        else:
+            print('TencentOCR = ' + res)
+
+        # if len(resp.TextDetections) > 0:
+        #     detectedText: TextDetection = resp.TextDetections[0]
+        #     strx = detectedText.DetectedText
+        #     data = "".join(list(filter(str.isdigit, strx)))
+        #
+        #     if len(data) == 4:
+        #         return data
+        #     else:
+        #         return None
+
+    def baidu_ocr_detect(self):
+        res = self.baidu_ocr.detect()
+        if res is None:
+            print('BaiduOCR fail')
+        else:
+            print('BaiduOCR = ' + res)
 
     @staticmethod
     def ocr_detect():

@@ -113,7 +113,7 @@ def zhongdeng_login():
     login_ocr_submit(10)
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # zhongdeng_login()
     # 微信小程序可以查询10次
 
