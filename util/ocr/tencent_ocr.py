@@ -52,7 +52,7 @@ class TencentOCR:
 
     def __request_ocr(self, image) -> Optional[dict]:
 
-        req = models.AdvertiseOCRRequest()
+        req = models.GeneralAccurateOCRRequest()
         params = {
             "ImageBase64": image
         }

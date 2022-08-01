@@ -29,11 +29,11 @@ def code_detect(count:int):
     res = client.basicAccurate(image, options)  # 高精度
 
     # 将所有的文字都合并到一起
-    strx = ""
+    stx = ""
     for tex in res["words_result"]:  # 遍历结果
-        strx += tex["words"]  # 每一行
+        stx += tex["words"]  # 每一行
 
-    data = "".join(list(filter(str.isdigit, strx)))
+    data = "".join(list(filter(str.isdigit, stx)))
     if len(data) == 4:
         return data
     else:
@@ -44,7 +44,6 @@ def code_detect(count:int):
 
 def ocr_code() -> str:
     check_img = driver.find_element(By.ID, "checkImg")
-
     times = 0
     while True:
         check_img.screenshot(code_image)
@@ -74,9 +73,9 @@ def is_element_present(how, what):
 def login_ocr_submit(count: int):
     code = ocr_code()
 
-    usercode = driver.find_element(By.ID, "usercode")
-    usercode.clear()
-    usercode.send_keys('winterwd')
+    userCode = driver.find_element(By.ID, "usercode")
+    userCode.clear()
+    userCode.send_keys('winterwd')
 
     password = driver.find_element(By.ID, "password")
     password.clear()

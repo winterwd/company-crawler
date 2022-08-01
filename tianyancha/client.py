@@ -5,6 +5,7 @@
 # @description --
 import json
 import logging
+import time
 
 from db.models import Company
 from tianyancha import *
@@ -21,6 +22,15 @@ class TycClient:
         self.companies = []
 
     def search(self, keyword: str):
+        pageNum = 1
+        while pageNum <= 20:
+            self.searchOnce(keyword, pageNum)
+            pageNum += 1
+            time.sleep(1)
+
+        return self
+
+    def searchOnce(self, keyword: str, page = 1):
         """
         根据关键字搜索相关企业信息
         :param keyword: 关键字
@@ -29,8 +39,8 @@ class TycClient:
         self.keyword = keyword
         if not self.payload:
             self.payload = {
-                "pageNum": 1,
-                "pageSize": 3,
+                "pageNum": page,
+                "pageSize": 10,
                 "sortType": 0
             }
         url = TycQueryApi.format(q=quote(keyword))
@@ -43,7 +53,7 @@ class TycClient:
                 self.__post_process__()
             else:
                 logging.info("查询异常：[%s]" % api_data)
-        return self
+
 
     def __post_process__(self):
         if not self.src:

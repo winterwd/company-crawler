@@ -7,6 +7,7 @@
 import logging
 from tianyancha.client import TycClient
 from util import excel
+import os
 
 
 def start():
@@ -20,7 +21,8 @@ def start():
         logging.info('正在采集[%s]...' % key)
         companies = TycClient().search(key).companies
         __printall(companies)
-        excel.write('../logs/tianyancha.xls', companies)
+        xls_path = os.path.abspath(os.path.join(os.getcwd(), './logs/tianyancha.xls'))
+        excel.write(xls_path, companies)
     logging.info("completed")
 
 

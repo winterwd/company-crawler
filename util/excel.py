@@ -13,7 +13,7 @@ from db.models import Company
 
 class CellItem(object):
     def __init__(self, src: Company = None):
-        if not src:
+        if src is None:
             self.keyword = '关键词'
             self.short_name = '企业简称'
             self.name = '企业名称'
@@ -35,7 +35,10 @@ class CellItem(object):
             self.representative = src.representative
             self.biz_status = src.biz_status
             self.found_time = src.found_time
-            self.tags = ','.join(src.tags)
+            if src.tags is None:
+                self.tags = '无'
+            else:
+                self.tags = ','.join(src.tags)
             self.industry = src.industry
 
     def values(self):
