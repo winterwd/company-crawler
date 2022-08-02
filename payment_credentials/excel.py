@@ -14,14 +14,14 @@ from payment_credentials.model import Payment
 class CellItem(object):
     def __init__(self, src: Payment = None):
         if not src:
-            self.time = '付款时间'
+            self.date = '付款时间'
             self.payer = '付款人'
             self.receiver = '收款人'
             self.amount = '金额'
             self.desc = '用途'
             self.file = '图片'
         else:
-            self.time = src.time
+            self.date = src.date
             self.payer = src.payer
             self.receiver = src.receiver
             self.amount = src.amount
@@ -31,7 +31,7 @@ class CellItem(object):
     def values(self):
         return [
             '',
-            self.time,
+            self.date,
             self.payer,
             self.receiver,
             self.amount,
