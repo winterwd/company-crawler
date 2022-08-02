@@ -15,9 +15,11 @@ from payment_credentials import PC_OCR_EXCEL_PATH
 from payment_credentials import PC_OCR_LOG_PATH
 from payment_credentials import excel
 from payment_credentials.model import Payment
+from shutil import copyfile
 from util import log
 import os
 import logging
+import time
 
 log.set_file(PC_OCR_LOG_PATH)
 
@@ -45,7 +47,8 @@ class PaymentOCR:
         L = []
         for dir_path, dir_names, filenames in os.walk(files_dir):
             for file in filenames:
-                L.append(os.path.join(dir_path, file))
+                if 'png' in file or 'jpg' in file:
+                    L.append(os.path.join(dir_path, file))
 
         self.files = L
 
@@ -65,7 +68,12 @@ class PaymentOCR:
                 logging.info(f'ocr success, index:{i}')
                 ocr_result += ocr_res
             else:
-                logging.error(f'ocr fail, index:{i}')
+                logging.error(f'ocr fail, index:{i}, file:{path}')
+                try:
+                    # 将失败的文件存储
+                    copyfile(path, path.replace('./', './error-'))
+                except IOError as e:
+                    print(f'Unable to copy file. {e}')
 
         self.ocr_res = ocr_result
         logging.info('ocr completed...')
@@ -77,14 +85,102 @@ class PaymentOCR:
         self.baidu_ocr.set_file_path(path)
         items = self.baidu_ocr.detect()
         logging.info(f'ocr result: {items}')
+        # QPS限制 2
+        time.sleep(1)
         if items:
             return self.get_payment(items, path)
         return []
 
+    @staticmethod
+    def recognize_name(pre_name, text):
+        """
+        识别付款人，收款人
+        """
+        # '全称：深圳市星锐实业发展有限公司全'
+        # '全称：深圳市星锐实业发展有限公司账'
+        full_name = (pre_name + text)
+        if '全称：' in full_name:
+            names = full_name.split('全称：')
+            if len(names) < 2:
+                return False, None
+            name = names[1]
+            if len(name) > 0 and name not in text:
+                # 此处text 不包含name
+                if '全' in text:
+                    # '全'：第一个name截止
+                    name = name.split('全')[0]
+                    return True, name
+                elif '账' in text:
+                    # '账'：第二个name截止
+                    name = name.split('账')[0]
+                    return True, name
+        return False, None
+
+    def recognize_time(self, text):
+        """
+        识别付款交易时间
+        """
+        # '交易时间：2021-01-2214：25：44'
+        # '：2021-01-2214：25：44'
+        if '交易时间：' in text:
+            text = text.replace('交易时间：', '')
+
+        temp = text
+        temp = temp.replace('-', '').replace(':', '').replace('：', '')
+        is_time = temp != text and temp.isdigit()
+        if not is_time:
+            return False, None
+
+        temp = text
+        # 2020-11-2613：13：12
+        temp = temp.split('-').pop()
+        if '：' in temp:
+            temp = temp.split('：')[0]
+        elif ':' in temp:
+            temp = temp.split(':')[0]
+        new_temp = self.str_insert(temp, 2, ' ')
+        # 2020-11-26 13:13:12
+        time = text.replace('：', ':').replace(temp, new_temp)
+        return True, time
+
+    def recognize_amount(self, text):
+        """
+        识别付款金额
+        """
+        temp = text
+        if self.baidu_ocr:
+            # baidu: '小写：30,000.00'
+            temp = temp.replace(',', '').replace('.', '').replace('小写：', '')
+        elif self.ali_ocr:
+            # ali '：30，000.00'
+            temp = temp.replace('，', '').replace('.', '').replace('：', '')
+        is_amount = temp != text and temp.isdigit()
+        if not is_amount:
+            return False, None
+
+        temp = text
+        # ali '：30，000.00'
+        # baidu: '小写：30,000.00'
+        amount = temp.replace(',', '').replace('，', '').split('：')[1]
+        return True, amount
+
+    @staticmethod
+    def recognize_desc(text):
+        """
+        识别用途
+        """
+        temp = text
+        if '途：' in temp:
+            # '用', '途：客房饰品定金'
+            desc = temp.split('：')[1]
+            if len(desc) > 0:
+                return True, desc
+        return False, None
+
     def get_payment(self, items: [str], path):
         payments: [Payment] = []
 
-        time = None
+        time_ = None
         payer = None
         receiver = None
         amount = None
@@ -93,69 +189,42 @@ class PaymentOCR:
         pre_name = ''
         for text in items:
             temp = text
+            is_name, name_text = self.recognize_name(pre_name, temp)
+            is_amount, amount_text = self.recognize_amount(temp)
+            is_time, time_text = self.recognize_time(temp)
+            is_desc, desc_text = self.recognize_desc(pre_name+temp)
 
-            is_time = temp.replace('-', '').replace(':', '').replace('：', '')
-            is_time = is_time != text and is_time.isdigit()
+            if payer and receiver:
+                if not desc_text:
+                    pre_name = text
+                pass
+            else:
+                # 记录上一次的内容
+                pre_name += text
 
-            is_amount = False
-            if self.baidu_ocr:
-                # baidu: '小写：30,000.00'
-                is_amount = temp.replace(',', '').replace('.', '').replace('小写：', '')
-            elif self.ali_ocr:
-                # ali '：30，000.00'
-                is_amount = temp.replace('，', '').replace('.', '').replace('：', '')
-            is_amount = is_amount != text and is_amount.isdigit()
-
-            company_name = (pre_name + text)
-            if '全' in text:
-                # 记录公司名标识
-                pre_name = text
-
-            if '全称：' in company_name:
-                has_name = len(company_name.split('：')) > 1
-                if not has_name:
-                    # pre_name: '全', text: '称：'
-                    break
-
-                pre_name = ''
-                # '全称：深圳市星锐实业发展有限公'
-                name: str = temp
-                if '：' in name:
-                    name = name.split('：')[1]
-                elif ':' in name:
-                    name = name.split(':')[1]
-
+            if is_name:
                 if not payer:
-                    payer = name
+                    payer = name_text
                 elif not receiver:
-                    receiver = name
-
+                    receiver = name_text
+                # 识别到一个name，重置
+                pre_name = text
             elif is_time:
-                # 2020-11-2613：13：12
-                temp = temp.split('-').pop()
-                if '：' in temp:
-                    temp = temp.split('：')[0]
-                elif ':' in temp:
-                    temp = temp.split(':')[0]
-                new_temp = self.str_insert(temp, 2, ' ')
-                # 2020-11-26 13:13:12
-                time = text.replace('：', ':').replace(temp, new_temp)
+                time_ = time_text
             elif is_amount:
-                # ali '：30，000.00'
-                # baidu: '小写：30,000.00'
-                amount = text.replace(',', '').replace('，', '').split('：')[1]
-            elif '途：' in temp:
-                # '用', '途：客房饰品定金'
-                desc = temp.split('：')[1]
+                amount = amount_text
+            elif is_desc:
+                desc = desc_text
 
             # 一组数据识别完成
-            if time and payer and receiver and amount and desc:
-                payments.append(Payment(time, receiver, payer, amount, desc, file=path))
-                time = None
+            if time_ and payer and receiver and amount and desc:
+                payments.append(Payment(time_, receiver, payer, amount, desc, file=path))
+                time_ = None
                 payer = None
                 receiver = None
                 amount = None
                 desc = None
+                pre_name = ''
 
         return payments
 
