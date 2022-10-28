@@ -21,26 +21,28 @@ class TycClient:
         self.brand_and_agencies = []
         self.companies = []
 
-    def search(self, keyword: str):
-        pageNum = 1
-        while pageNum <= 20:
-            self.searchOnce(keyword, pageNum)
-            pageNum += 1
-            time.sleep(1)
-
-        return self
-
-    def searchOnce(self, keyword: str, page = 1):
+    def search(self, keyword: str, page: int = 1, pageSize: int = 10):
         """
         根据关键字搜索相关企业信息
         :param keyword: 关键字
-        :return:
+        :param page: page
+        :param pageSize: pageSize
+        :return: TycClient()
         """
+        pageNum = 1
+        while pageNum <= page:
+            self._searchOnce(keyword, pageNum, pageSize)
+            pageNum += 1
+            # time.sleep(1)
+
+        return self
+
+    def _searchOnce(self, keyword: str, page: int = 1, pageSize: int = 10):
         self.keyword = keyword
         if not self.payload:
             self.payload = {
                 "pageNum": page,
-                "pageSize": 10,
+                "pageSize": pageSize,
                 "sortType": 0
             }
         url = TycQueryApi.format(q=quote(keyword))
@@ -53,7 +55,6 @@ class TycClient:
                 self.__post_process__()
             else:
                 logging.info("查询异常：[%s]" % api_data)
-
 
     def __post_process__(self):
         if not self.src:
@@ -70,15 +71,17 @@ class TycClient:
             def is_equal(b_and_a):
                 return company.get('id') == b_and_a.get('graphId')
 
-            try:
-                # 公司主体融资阶段、竟品信息
-                brand_and_agency = filter(is_equal, self.brand_and_agencies).__next__()
-                TycClient.EntityHelper.__another_info__(brand_and_agency, company_entity)
-            except:
-                logging.warning('竟品信息获取失败！')
-                pass
+            # try:
+            #     # 公司主体融资阶段、竟品信息
+            #     brand_and_agency = filter(is_equal, self.brand_and_agencies).__next__()
+            #     TycClient.EntityHelper.__another_info__(brand_and_agency, company_entity)
+            # except:
+            #     logging.warning('竟品信息获取失败！')
+            #     pass
+
             """ 公司详情 """
-            detail_resp = Request(TycPortraitApi.format(eid=company.get("id")), proxy=True, headers=REQUEST_HEADERS).data
+            detail_resp = Request(TycPortraitApi.format(eid=company.get("id")), proxy=True,
+                                  headers=REQUEST_HEADERS).data
             if detail_resp:
                 company_portrait = json.loads(detail_resp)
                 # 公司详情补充信息

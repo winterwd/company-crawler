@@ -19,7 +19,7 @@ def start():
     keys = globals().get('keywords', [])
     for key in keys:
         logging.info('正在采集[%s]...' % key)
-        companies = TycClient().search(key).companies
+        companies = TycClient().search(key, pageSize=1).companies
         __printall(companies)
         xls_path = os.path.abspath(os.path.join(os.getcwd(), './logs/tianyancha.xls'))
         excel.write(xls_path, companies)

@@ -29,9 +29,16 @@ class CellItem(object):
             self.keyword = src.keyword
             self.short_name = src.short_name
             self.name = src.name
-            self.company_area = src.province + src.city + src.district
+            self.company_area = f'{src.province}{src.city}{src.district}'
             self.company_address = src.company_address
-            self.contact = src.contact
+
+            if src.phones is not None and len(src.phones) > 1:
+                self.contact = ', '.join(src.phones)
+            elif src.contact is not None:
+                self.contact = src.contact
+            else:
+                self.contact = '暂无'
+
             self.representative = src.representative
             self.biz_status = src.biz_status
             self.found_time = src.found_time
