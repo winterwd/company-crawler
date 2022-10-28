@@ -20,7 +20,6 @@ from util import log
 import os
 import logging
 import time
-import re
 
 log.set_file(PC_OCR_LOG_PATH)
 
@@ -54,7 +53,8 @@ class PaymentOCR:
         self.files = L
 
     def ocr_detect(self):
-        logging.info('ocr file start...')
+        logging.info('ocr start...')
+
         index = min(self.index, len(self.files) - 1)
         file_paths = self.files[index:]
 
@@ -65,10 +65,10 @@ class PaymentOCR:
             ocr_res: [] = self.fetch_ocr_result(path)
 
             if len(ocr_res) > 0:
-                logging.info(f'ocr file success, index:{i}')
+                logging.info(f'ocr success, index:{i}')
                 ocr_result += ocr_res
             else:
-                logging.error(f'ocr file fail, index:{i}, file:{path}')
+                logging.error(f'ocr fail, index:{i}, file:{path}')
                 try:
                     # 将失败的文件存储
                     copyfile(path, path.replace('./', './error-'))
@@ -76,7 +76,7 @@ class PaymentOCR:
                     print(f'Unable to copy file. {e}')
 
         self.ocr_res = ocr_result
-        logging.info('ocr file completed...')
+        logging.info('ocr completed...')
 
     def fetch_ocr_result(self, path):
         # self.ali_ocr.set_file_path(path)
@@ -92,106 +92,140 @@ class PaymentOCR:
         return []
 
     @staticmethod
-    def recognize_name(text_item):
+    def recognize_name(pre_name, text):
         """
         识别付款人，收款人
         """
-        temp = text_item
-        if '账号：' in temp and '全称：' in temp:
-            try:
-                names = temp.split('账号：')[0]
-                names = names.split('全称：')
-                return names[1], names[2]
-            except BaseException as e:
-                logging.error(f'解析付款人，收款人 error. {e}')
-                return '', ''
+        # '全称：深圳市星锐实业发展有限公司全'
+        # '全称：深圳市星锐实业发展有限公司账'
+        full_name = (pre_name + text)
+        if '全称：' in full_name:
+            names = full_name.split('全称：')
+            if len(names) < 2:
+                return False, None
+            name = names[1]
+            if len(name) > 0 and name not in text:
+                # 此处text 不包含name
+                if '全' in text:
+                    # '全'：第一个name截止
+                    name = name.split('全')[0]
+                    return True, name
+                elif '账' in text:
+                    # '账'：第二个name截止
+                    name = name.split('账')[0]
+                    return True, name
+        return False, None
 
-    @staticmethod
-    def recognize_date(text_item):
+    def recognize_time(self, text):
         """
         识别付款交易时间
         """
+        # '交易时间：2021-01-2214：25：44'
+        # '：2021-01-2214：25：44'
+        if '交易时间：' in text:
+            text = text.replace('交易时间：', '')
 
-        def str_insert(origin, pos, str_add):
-            """
-            指定位置插入 str_add
-            """
-            str_list = list(origin)  # 字符串转list
-            str_list.insert(pos, str_add)  # 在指定位置插入字符串
-            str_out = ''.join(str_list)  # 空字符连接
-            return str_out
+        temp = text
+        temp = temp.replace('-', '').replace(':', '').replace('：', '')
+        is_time = temp != text and temp.isdigit()
+        if not is_time:
+            return False, None
 
-        temp = text_item
-        if '交易时间：' in temp and '用途' in temp:
-            try:
-                date = temp.split('交易时间：')[1]
-                date = date.split('用途')[0]
-                date = date.replace('：', ':')
-                # 2020-11-2613:13:12 > 2020-11-26 13:13:12
-                date_temp = date
-                date_temp = date_temp.split('-').pop()
-                date_temp = date_temp.split(':')[0]
-                new_date = str_insert(date_temp, 2, ' ')
-                return date.replace(date_temp, new_date)
-            except BaseException as e:
-                logging.error(f'解析交易时间 error. {e}')
-                return ''
+        temp = text
+        # 2020-11-2613：13：12
+        temp = temp.split('-').pop()
+        if '：' in temp:
+            temp = temp.split('：')[0]
+        elif ':' in temp:
+            temp = temp.split(':')[0]
+        new_temp = self.str_insert(temp, 2, ' ')
+        # 2020-11-26 13:13:12
+        time = text.replace('：', ':').replace(temp, new_temp)
+        return True, time
 
-    @staticmethod
-    def recognize_amount(text_item):
+    def recognize_amount(self, text):
         """
         识别付款金额
         """
-        temp = text_item
-        # if self.baidu_ocr:
-        #     # baidu: '小写：30,000.00'
-        #     temp = temp.replace(',', '').replace('.', '').replace('小写：', '')
-        # elif self.ali_ocr:
-        #     # ali '：30，000.00'
-        #     temp = temp.replace('，', '').replace('.', '').replace('：', '')
+        temp = text
+        if self.baidu_ocr:
+            # baidu: '小写：30,000.00'
+            temp = temp.replace(',', '').replace('.', '').replace('小写：', '')
+        elif self.ali_ocr:
+            # ali '：30，000.00'
+            temp = temp.replace('，', '').replace('.', '').replace('：', '')
+        is_amount = temp != text and temp.isdigit()
+        if not is_amount:
+            return False, None
 
-        if '小写：' in temp and '：人民币' in temp:
-            try:
-                amount = temp.split('小写：')[1]
-                amount = amount.split('：人民币')[0]
-                amount = re.sub('[\u4e00-\u9fa5]', '', amount)
-                return amount
-            except BaseException as e:
-                logging.error(f'解析交易金额 error. {e}')
-                return ''
+        temp = text
+        # ali '：30，000.00'
+        # baidu: '小写：30,000.00'
+        amount = temp.replace(',', '').replace('，', '').split('：')[1]
+        return True, amount
 
     @staticmethod
-    def recognize_desc(text_item):
+    def recognize_desc(text):
         """
         识别用途
         """
-        temp = text_item
-        if '用途：' in temp and '摘要' in temp:
-            try:
-                desc = temp.split('用途：')[1]
-                desc = desc.split('摘要')[0]
-                return desc
-            except BaseException as e:
-                logging.error(f'解析用途 error. {e}')
-                return ''
+        temp = text
+        if '途：' in temp:
+            # '用', '途：客房饰品定金'
+            desc = temp.split('：')[1]
+            if len(desc) > 0:
+                return True, desc
+        return False, None
 
     def get_payment(self, items: [str], path):
         payments: [Payment] = []
 
-        text_items = "".join(str(item) for item in items).split('兴业银行汇款回单')
-        text_items = [val for val in text_items if len(val) > 30]
-        for text_item in text_items:
-            try:
-                payer, receiver = self.recognize_name(text_item)
-                amount = self.recognize_amount(text_item)
-                date = self.recognize_date(text_item)
-                desc = self.recognize_desc(text_item)
+        time_ = None
+        payer = None
+        receiver = None
+        amount = None
+        desc = None
 
-                obj = Payment(date, receiver, payer, amount, desc, file=path)
-                logging.info(obj.__str__())
-                payments.append(obj)
-            except BaseException as e:
-                logging.error(f'解析 error. {e}')
+        pre_name = ''
+        for text in items:
+            temp = text
+            is_name, name_text = self.recognize_name(pre_name, temp)
+            is_amount, amount_text = self.recognize_amount(temp)
+            is_time, time_text = self.recognize_time(temp)
+            is_desc, desc_text = self.recognize_desc(pre_name+temp)
+
+            if payer and receiver:
+                if not desc_text:
+                    pre_name = text
+                pass
+            else:
+                # 记录上一次的内容
+                pre_name += text
+
+            if is_name:
+                if not payer:
+                    payer = name_text
+                elif not receiver:
+                    receiver = name_text
+                # 识别到一个name，重置
+                pre_name = text
+            elif is_time:
+                time_ = time_text
+            elif is_amount:
+                amount = amount_text
+            elif is_desc:
+                desc = desc_text
+
+            # 一组数据识别完成
+            if time_ and payer and receiver and amount and desc:
+                payments.append(Payment(time_, receiver, payer, amount, desc, file=path))
+                time_ = None
+                payer = None
+                receiver = None
+                amount = None
+                desc = None
+                pre_name = ''
+
         return payments
 
     def export_to_excel(self):
@@ -203,6 +237,16 @@ class PaymentOCR:
             logging.info('excel end...')
         else:
             logging.info('excel no value...')
+
+    @staticmethod
+    def str_insert(origin, pos, str_add):
+        """
+        指定位置插入 str_add
+        """
+        str_list = list(origin)  # 字符串转list
+        str_list.insert(pos, str_add)  # 在指定位置插入字符串
+        str_out = ''.join(str_list)  # 空字符连接
+        return str_out
 
 
 if __name__ == '__main__':
