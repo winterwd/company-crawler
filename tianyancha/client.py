@@ -55,6 +55,8 @@ class TycClient:
                 self.__post_process__()
             else:
                 logging.info("查询异常：[%s]" % api_data)
+        else:
+            logging.info("查询异常：[%s]" % url)
 
     def __post_process__(self):
         if not self.src:
