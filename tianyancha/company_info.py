@@ -12,7 +12,7 @@ import os
 import time
 
 
-def start(keys: list = None):
+def start(keys: list = None, path: str = './logs/company_info.xls'):
     if keys is None:
         keys = []
 
@@ -33,6 +33,6 @@ def start(keys: list = None):
             logging.warning('采集[%s]..出错' % key)
             break
 
-    xls_path = os.path.abspath(os.path.join(os.getcwd(), './logs/tianyancha_company.xls'))
+    xls_path = os.path.abspath(os.path.join(os.getcwd(), path))
     excel.write(xls_path, datas)
     logging.info("completed")
