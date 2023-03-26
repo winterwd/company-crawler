@@ -15,17 +15,21 @@ from tianyancha import company_info
 from util import log
 
 urllib3.disable_warnings()
-
 log.set_file("./logs/tianyancha_c.log")
+WAIT_SECOND = 600
 
 
-def batch_process_names(names: list = []):
+def batch_process_names(names=None):
+    if names is None:
+        names = []
+
     index = 0
     for name in names:
         if len(name) > 0:
             path = f'./logs/tianyancha_company_{index}.xls'
             company_info.start(name, path)
-            time.sleep(600)
+            time.sleep(WAIT_SECOND)
+            index += 1
 
 
 if __name__ == '__main__':
