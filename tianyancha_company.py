@@ -16,7 +16,7 @@ from util import log
 
 urllib3.disable_warnings()
 log.set_file("./logs/tianyancha_c.log")
-WAIT_SECOND = 600
+WAIT_SECOND = 60
 
 
 def batch_process_names(names=None):
@@ -26,18 +26,18 @@ def batch_process_names(names=None):
     index = 0
     for name in names:
         if len(name) > 0:
-            path = f'./logs/tianyancha_company_{index}.xls'
+            path = f"./logs/company_info/tianyancha_company_{index}.xlsx"
             company_info.start(name, path)
             time.sleep(WAIT_SECOND)
             index += 1
 
 
-if __name__ == '__main__':
-    with open('./logs/company.txt', 'r') as file:
+if __name__ == "__main__":
+    with open("./logs/company_info/company.txt", "r") as file:
         items = file.read().split()
         keys = [x for i, x in enumerate(items) if x not in items[:i]]
 
-        MAX_PAGE = 10
+        MAX_PAGE = 8
         MAX_PAGE_COUNT = 400
         count = min(MAX_PAGE, math.ceil(len(keys) / MAX_PAGE_COUNT))
         array = np.array_split(keys, count)

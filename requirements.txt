@@ -14,3 +14,4 @@ alibabacloud_ocr_api20210707
 alibabacloud_darabonba_stream
 tencentcloud-sdk-python
 numpy~=1.22.2
+openpyxl~=3.1.5
